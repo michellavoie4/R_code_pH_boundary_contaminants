@@ -5,6 +5,8 @@
 # Lavoie M. 2018                                                              #
 #-----------------------------------------------------------------------------#
 
+rm(list=ls())
+
 #------------------------------#
 # Load packages                #
 #------------------------------#
@@ -12,11 +14,11 @@
 library(ReacTran)
 
 #----------------------------------------------------------------------------#
-# Functions calculating the chemical species of the carbonate system          #
+# Function calculating the chemical species of the carbonate system          #
 # in the boundary layer and plots. NO3- is the N source.                      #
 
-# This function compute the concentration (mol/m^3) of CO2, HCO3-, CO32-, H+ and OH- as a function of the distance 
-# from the cell surface. This function computes also relative changes in the boundary layer.
+# This function computes the concentration (mol/m^3) of CO2, HCO3-, CO32-, H+ and OH- as a function of the distance 
+# from the cell surface. This function also computes relative changes in the boundary layer.
 # I : ionic strengh in mol/L
 # R : radius (m)
 # L : length of the layer surrounding the cell (m)
@@ -83,11 +85,11 @@ boundary_layer <- function(t, state, parms) {
 # Number of grid layer
 N    <- 10000
 
-# Radius of the cell or boundary layer thickness (m)
+# Radius of the cell (m)
 R    <- R
 
 # Model grid setup 
-X.grid <- setup.grid.1D(x.up = R, L = L, N = N) # x.up = radius of the cell; radius = boundary layer thickness
+X.grid <- setup.grid.1D(x.up = R, L = L, N = N) # x.up = radius of the cell
 
 # Interface area
 A.grid <- setup.prop.1D(grid = X.grid, func = function(r) 4*pi*r^2)
@@ -104,7 +106,7 @@ Kh <- 0.034    # Henry's constant (mol atm-1 L-1) at I =0 ; Correction of Kh at 
 CO2 <- pCO2 * Kh * 1000     # CO2 concentration (mol m-3)
 
 # Fixed H+ and OH- concentrations at a given pH (mol m-3)
-source("~/R software/R scripts/Functions/func_activity_I.R") 
+source("func_activity_I.R") 
 coeff1 <- coeff_act(charge = 1, I = I)$coeff_act
 
 H <- (1/coeff1) * 1000 * (10^-pH)
@@ -112,7 +114,7 @@ OH <- (1/coeff1) * 1000 * 1E-14 / (10^-pH)
 
 # Calculations of HCO3- concentration
 K1 <- 10^6.35              # Thermodynamic equilibrium constant of H+ + HCO3- = CO2 (Martell et al 2004)
-source("~/R software/R scripts/Functions/func_K_corr2_I.R")  # Loading the function for ionic strength correction
+source("func_K_corr2_I.R")  # Loading the function for ionic strength correction
 K1_corr <- K_corr2(K0=K1, I=I, chargeA=1, chargeB=1, chargeC=0)
 K1_corr
 HCO3 <- (CO2 * 1000 * (1/K1_corr$K1))/H
@@ -124,7 +126,7 @@ K2_corr <- K_corr2(K0=K2, I=I, chargeA=1, chargeB=2, chargeC=1)
 K2_corr
 CO3 <- (HCO3 * 1000 * (1/K2_corr$K1)) / H
 
-# Concentration of CO2,HCO3,CO3,H,OH in bulk solution (mol m^-3) at I=0, 25 °C and a given pH
+# Concentration of CO2,HCO3,CO3,H,OH in bulk solution (mol m^-3) at I=0, 25 ?C and a given pH
 C <- c(CO2, HCO3, CO3, H, OH)
 
 # Growth rate (u in d-1)
@@ -137,10 +139,6 @@ F1 <- -(23230/3) * R * u / 86400
 # With a Redfield ratio C:N of 106: 16, for each mol C assimilated, 0.15 mol H+ is removed from the medium if NO3- is the N source 
 NO3_H <- 0.15 * F1
 
-# Acido-basic reactions and NH4+ assimilation
-# With a Redfield ratio C:N of 106: 16, for each mol C assimilated, 0.15 mol H+ is produced in the medium if NH4+ is the N source 
-NH4_H <- -0.15 * F1
-
 # Diffusion coefficient of CO2,... (m^2 s^-1)
 D  <- 1.18E-09
 
@@ -148,8 +146,8 @@ D  <- 1.18E-09
 kb_I0 <- c(7.88029840776055E+01, 1.8E-04, NA, 2.33867570643599, 6.54216399387684E+05, 1.4)       # m^3 mol^-1 s^-1; s^-1; ; s^-1; s^-1; mol m^-3 s^-1
 kf_I0 <- c(3.52E-02, 8.04030465871734, NA, 5E+07, 3.06E+06, 1.4E+08)          # s-^1; m^3 mol^-1 s^-1; ; m^3 mol^-1 s^-1; m^3 mol^-1 s^-1; m^3 mol^-1 s^-1
 
-source('~/R software/R scripts/Functions/func_k_rate_cst_corr2_I.R')  # Load the function converting rate constant at a given I
-kwat_I0 <- 1E-14                     # Ion product of water at 25 °C
+source("func_k_rate_cst_corr2_I.R")  # Load the function converting rate constant at a given I
+kwat_I0 <- 1E-14                     # Ion product of water at 25 ?C
 kwat <- kwat_I0 / (coeff1 * coeff1)  # Conditional ion product
 kb1 <- k_corr2(k0 = kb_I0[1], I = I, chargeA = 1, chargeB = 1, chargeC = 0)$k1 # HCO3- + H+ -> CO2
 kb1
@@ -237,32 +235,40 @@ carb_pH8 <- boundary_carb_syst_NO3(I = 0.001, R = 5E-06 , L = 150E-06, pH = 8)
 
 # Plot of relative enrichment (C/Co) of each chemical species at different pHs.
 tiff( "Fig1_A_E.tiff", res = 100)
-oldpar <- par(mfrow=c(3,2), mar=c(4,4,2,1), oma = c(0,0,0,0)) #, mgp=c(1,0,0))
-xlab <- expression(paste(" distance from cell surface (", mu, "m)"))
-plot(carb_pH7$xlabel*1E+06-5, carb_pH7$CO2enrich, type = "l", lty = 1, xlim = c(0, 60), ylim = c(0.9, 1), xlab = xlab, ylab = "relative change", main = expression(paste("A : CO"[2], " R = 5", mu, "m")))
-lines(carb_pH5$xlabel*1E+06-5, carb_pH5$CO2enrich, type = "l", lty = 2) # pointillé
-lines(carb_pH8$xlabel*1E+06-5, carb_pH8$CO2enrich, type = "l", lty = 3) # points
-legend("bottomright", legend= c("pH7", "pH5", "pH8"), lty = c(1,2,3)) #, y.intersp=0.2, bty = "n", cex=1, pt.cex = 1)
+oldpar <- par(mfrow=c(3,2), mar=c(0,0,0,3), oma = c(4,4.1,4,0.4), las=1) 
+# Panel A : CO2 concentrations (r = 5 um)
+plot(carb_pH7$xlabel*1E+06-5, carb_pH7$CO2enrich, type = "l", lty = 1, xaxt = "n", xlim = c(0, 60), ylim = c(0.9, 1)) 
+lines(carb_pH5$xlabel*1E+06-5, carb_pH5$CO2enrich, type = "l", lty = 2) 
+lines(carb_pH8$xlabel*1E+06-5, carb_pH8$CO2enrich, type = "l", lty = 3) 
+legend("bottomright", legend= c("pH7", "pH5", "pH8"), lty = c(1,2,3))
+mtext(text = "A", side = 3, adj = 0.05, line = -1.4, font = 2)
+mtext(text = "relative change", side=2, line = 2.7, outer=TRUE, las=0)
+mtext(text = expression(paste(" distance from cell surface (", mu, "m)")), side = 1, line = 3, font = 2, outer=TRUE, las=1)
 
-plot(carb_pH7$xlabel*1E+06-5, carb_pH7$HCO3enrich, type = "l", lty = 1, xlim = c(0, 60), ylim = c(0.95, 1.01), xlab = xlab, ylab = "relative change", main = expression(paste("B : HCO"[3]^"-", " R = 5", mu, "m")))
-lines(carb_pH5$xlabel*1E+06-5, carb_pH5$HCO3enrich, type = "l", lty = 2) # pointillé
-lines(carb_pH8$xlabel*1E+06-5, carb_pH8$HCO3enrich, type = "l", lty = 3) # points
-legend("bottomright", legend= c("pH7", "pH5", "pH8"), lty = c(1,2,3)) #, y.intersp=0.2, bty = "n")
+# Panel B : HCO3- concentrations (r = 5 um)
+plot(carb_pH7$xlabel*1E+06-5, carb_pH7$HCO3enrich, type = "l", lty = 1, xaxt="n", xlim = c(0, 60), ylim = c(0.95, 1.01))
+lines(carb_pH5$xlabel*1E+06-5, carb_pH5$HCO3enrich, type = "l", lty = 2) 
+lines(carb_pH8$xlabel*1E+06-5, carb_pH8$HCO3enrich, type = "l", lty = 3)
+mtext(text = "B", side = 3, adj = 0.05, line = -1.4, font = 2)
 
-plot(carb_pH7$xlabel*1E+06-5, carb_pH7$CO3enrich, type = "l", lty = 1, xlim = c(0, 60), ylim = c(1, 1.4), xlab = xlab, ylab = "relative change", main = expression(paste("C : CO"[3]^"2-", " R = 5", mu, "m")))
-lines(carb_pH5$xlabel*1E+06-5, carb_pH5$CO3enrich, type = "l", lty = 2) # pointillé
-lines(carb_pH8$xlabel*1E+06-5, carb_pH8$CO3enrich, type = "l", lty = 3) # points
-legend("topright", legend= c("pH7", "pH5", "pH8"), lty = c(1,2,3)) #, y.intersp=0.2, bty = "n")
+# Panel C : CO32- concentrations (r = 5 um)
+plot(carb_pH7$xlabel*1E+06-5, carb_pH7$CO3enrich, type = "l", lty = 1, xaxt="n", xlim = c(0, 60), ylim = c(1, 1.4))
+lines(carb_pH5$xlabel*1E+06-5, carb_pH5$CO3enrich, type = "l", lty = 2)
+lines(carb_pH8$xlabel*1E+06-5, carb_pH8$CO3enrich, type = "l", lty = 3)
+mtext(text = "C", side = 3, adj = 0.05, line = -1.4, font = 2)
 
-plot(carb_pH7$xlabel*1E+06-5, carb_pH7$Henrich, type = "l", lty = 1, xlim = c(0, 60), ylim = c(0.6, 1.01), xlab = xlab, ylab = "relative change", main = expression(paste("D : H"^"+", " R = 5", mu, "m")))
-lines(carb_pH5$xlabel*1E+06-5, carb_pH5$Henrich, type = "l", lty = 2) # pointillé
-lines(carb_pH8$xlabel*1E+06-5, carb_pH8$Henrich, type = "l", lty = 3) # points
-legend("bottomright", legend= c("pH7", "pH5", "pH8"), lty = c(1,2,3)) #, y.intersp=0.2, bty = "n")
+# Panel D : H+ concentrations (r = 5 um)
+plot(carb_pH7$xlabel*1E+06-5, carb_pH7$Henrich, type = "l", lty = 1, xlim = c(0, 60), ylim = c(0.6, 1.01))
+lines(carb_pH5$xlabel*1E+06-5, carb_pH5$Henrich, type = "l", lty = 2)
+lines(carb_pH8$xlabel*1E+06-5, carb_pH8$Henrich, type = "l", lty = 3)
+mtext(text = "D", side = 3, adj = 0.06, line = -2.5, font = 2)
 
-plot(carb_pH7$xlabel*1E+06-5, carb_pH7$OHenrich, type = "l", lty = 1, xlim = c(0, 60), ylim = c(1, 1.5), xlab = xlab, ylab = "relative change", main = expression(paste("E : OH"^"-", " R = 5", mu, "m")))
-lines(carb_pH5$xlabel*1E+06-5, carb_pH5$OHenrich, type = "l", lty = 2) # pointillé
-lines(carb_pH8$xlabel*1E+06-5, carb_pH8$OHenrich, type = "l", lty = 3) # points
-legend("topright", legend= c("pH7", "pH5", "pH8"), lty = c(1,2,3))#, y.intersp=0.2, bty = "n")
+# Panel E : OH- concentrations (r = 5 um)
+plot(carb_pH7$xlabel*1E+06-5, carb_pH7$OHenrich, type = "l", lty = 1, xlim = c(0, 60), ylim = c(1, 1.5))
+lines(carb_pH5$xlabel*1E+06-5, carb_pH5$OHenrich, type = "l", lty = 2)
+lines(carb_pH8$xlabel*1E+06-5, carb_pH8$OHenrich, type = "l", lty = 3)
+mtext(text = "E", side = 3, adj = 0.05, line = -1.4, font = 2)
+
 par(oldpar)
 dev.off()
 
@@ -276,31 +282,41 @@ carb_pH8 <- boundary_carb_syst_NO3(I = 0.001, R = 30E-06 , L = 900E-06, pH = 8)
 
 # Plot of relative enrichment (C/Co) of each chemical species at different pHs.
 tiff( "Fig1_F.tiff", res = 100)
-oldpar <- par(mfrow=c(3,2), mar=c(4.1,4.1,2,1), oma = c(0,0,0,0)) #, mgp=c(1,0,0))
-plot(carb_pH7$xlabel*1E+06-30, carb_pH7$CO2enrich, type = "l", lty = 1, xlim = c(0, 100), ylim = c(0, 1), xlab = xlab, ylab = "relative change", main = expression(paste("F : CO"[2], " R = 30", mu, "m")))
-lines(carb_pH5$xlabel*1E+06-30, carb_pH5$CO2enrich, type = "l", lty = 2) # pointillé
-lines(carb_pH8$xlabel*1E+06-30, carb_pH8$CO2enrich, type = "l", lty = 3) # points
-legend("bottomright", legend= c("pH7", "pH5", "pH8"), lty = c(1,2,3)) #, y.intersp=0.2, bty = "n")
+oldpar <- par(mfrow=c(3,2), mar=c(0,0,0,3), oma = c(4,4,4,0.4), las=1) 
 
-plot(carb_pH7$xlabel*1E+06-30, carb_pH7$HCO3enrich, type = "l", lty = 1, xlim = c(0, 100), ylim = c(0.5, 1.01), xlab = xlab, ylab = "relative change", main = expression(paste("G : HCO"[3]^"-", " R = 30", mu, "m")))
-lines(carb_pH5$xlabel*1E+06-30, carb_pH5$HCO3enrich, type = "l", lty = 2) # pointillé
-lines(carb_pH8$xlabel*1E+06-30, carb_pH8$HCO3enrich, type = "l", lty = 3) # points
-legend("bottomright", legend= c("pH7", "pH5", "pH8"), lty = c(1,2,3)) #, y.intersp=0.2, bty = "n")
+# Panel F : CO2 concentrations (r = 30 um)
+plot(carb_pH7$xlabel*1E+06-30, carb_pH7$CO2enrich, type = "l", lty = 1, xaxt = "n", xlim = c(0, 100), ylim = c(0, 1))
+lines(carb_pH5$xlabel*1E+06-30, carb_pH5$CO2enrich, type = "l", lty = 2)
+lines(carb_pH8$xlabel*1E+06-30, carb_pH8$CO2enrich, type = "l", lty = 3)
+legend("bottomright", legend= c("pH7", "pH5", "pH8"), lty = c(1,2,3))
+mtext(text = "F", side = 3, adj = 0.05, line = -1.4, font = 2)
+mtext(text = "relative change", side=2, line=2.5, outer=TRUE, las=0)
+mtext(text = expression(paste(" distance from cell surface (", mu, "m)")), side = 1, line = 3, font = 2, outer=TRUE, las=1)
 
-plot(carb_pH7$xlabel*1E+06-30, carb_pH7$CO3enrich, type = "l", lty = 1, xlim = c(0, 100), ylim = c(0.5, 5), xlab = xlab, ylab = "relative change", main = expression(paste("H : CO"[3]^"-", " R = 30", mu, "m")))
-lines(carb_pH5$xlabel*1E+06-30, carb_pH5$CO3enrich, type = "l", lty = 2) # pointillé
-lines(carb_pH8$xlabel*1E+06-30, carb_pH8$CO3enrich, type = "l", lty = 3) # points
-legend("topright", legend= c("pH7", "pH5", "pH8"), lty = c(1,2,3)) #, y.intersp=0.2, bty = "n")
+# Panel G : HCO3- concentrations (r = 30 um)
+plot(carb_pH7$xlabel*1E+06-30, carb_pH7$HCO3enrich, type = "l", lty = 1, xaxt = "n", xlim = c(0, 100), ylim = c(0.5, 1.01))
+lines(carb_pH5$xlabel*1E+06-30, carb_pH5$HCO3enrich, type = "l", lty = 2)
+lines(carb_pH8$xlabel*1E+06-30, carb_pH8$HCO3enrich, type = "l", lty = 3)
+mtext(text = "G", side = 3, adj = 0.03, line = -2.1, font = 2)
 
-plot(carb_pH7$xlabel*1E+06-30, carb_pH7$Henrich, type = "l", lty = 1, xlim = c(0, 100), ylim = c(0, 1.1), xlab = xlab, ylab = "relative change", main = expression(paste("I : H"^"+", " R = 30", mu, "m")))
-lines(carb_pH5$xlabel*1E+06-30, carb_pH5$Henrich, type = "l", lty = 2) # pointillé
-lines(carb_pH8$xlabel*1E+06-30, carb_pH8$Henrich, type = "l", lty = 3) # points
-legend("bottomright", legend= c("pH7", "pH5", "pH8"), lty = c(1,2,3)) #, y.intersp=0.2, bty = "n")
+# Panel H : CO32- concentrations (r = 30 um)
+plot(carb_pH7$xlabel*1E+06-30, carb_pH7$CO3enrich, type = "l", lty = 1, xaxt = "n", xlim = c(0, 100), ylim = c(0.5, 5))
+lines(carb_pH5$xlabel*1E+06-30, carb_pH5$CO3enrich, type = "l", lty = 2)
+lines(carb_pH8$xlabel*1E+06-30, carb_pH8$CO3enrich, type = "l", lty = 3) 
+mtext(text = "H", side = 3, adj = 0.08, line = -1.4, font = 2)
 
-plot(carb_pH7$xlabel*1E+06-30, carb_pH7$OHenrich, type = "l", lty = 1, xlim = c(0, 100), ylim = c(1, 5), xlab = xlab, ylab = "relative change", main = expression(paste("J : OH"^"-", " R = 30" , mu, "m")))
-lines(carb_pH5$xlabel*1E+06-30, carb_pH5$OHenrich, type = "l", lty = 2) # pointillé
-lines(carb_pH8$xlabel*1E+06-30, carb_pH8$OHenrich, type = "l", lty = 3) # points
-legend("topright", legend= c("pH7", "pH5", "pH8"), lty = c(1,2,3))#, y.intersp=0.5, bty = "n")
+# Panel I : H+ concentrations (r = 30 um)
+plot(carb_pH7$xlabel*1E+06-30, carb_pH7$Henrich, type = "l", lty = 1, xlim = c(0, 100), ylim = c(0, 1.1))
+lines(carb_pH5$xlabel*1E+06-30, carb_pH5$Henrich, type = "l", lty = 2)
+lines(carb_pH8$xlabel*1E+06-30, carb_pH8$Henrich, type = "l", lty = 3) 
+mtext(text = "I", side = 3, adj = 0.05, line = -1.4, font = 2)
+
+# Panel J : OH- concentrations (r = 30 um)
+plot(carb_pH7$xlabel*1E+06-30, carb_pH7$OHenrich, type = "l", lty = 1, xlim = c(0, 100), ylim = c(1, 5))
+lines(carb_pH5$xlabel*1E+06-30, carb_pH5$OHenrich, type = "l", lty = 2)
+lines(carb_pH8$xlabel*1E+06-30, carb_pH8$OHenrich, type = "l", lty = 3)
+mtext(text = "J", side = 3, adj = 0.08, line = -1.4, font = 2)
+
 par(oldpar)
 dev.off()
 
