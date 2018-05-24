@@ -1,9 +1,9 @@
-#-----------------------------------------------------------------------------#
-# Fig. 2 Main program                                                         #
-#                                                                             #
-#                                                                             #
-# Lavoie M. 2018                                                              #
-#-----------------------------------------------------------------------------#
+#----------------------------------------------------------------------------#
+# Fig. SI.1 Main program                                                     #
+# Modeling the carbonate system in the algal boundary layer; no N source     #
+#                                                                            #
+# M. Lavoie 2018                                                             #
+#----------------------------------------------------------------------------#
 
 rm(list=ls())
 
@@ -14,8 +14,8 @@ rm(list=ls())
 library(ReacTran)
 
 #-----------------------------------------------------------------------------#
-# Function calculating the chemical species of the carbonate system          #
-# in the boundary layer.                       NH4+ is the N source!         #
+# Function calculating the chemical species of the carbonate system           #
+# in the boundary layer.            N uptake rate = 0                         #
 
 # This function computes the concentration (mol/m^3) of CO2, HCO3-, CO32-, H+ and OH- as a function of the distance 
 # from the cell surface. This also computes relative changes in the boundary layer.
@@ -26,9 +26,9 @@ library(ReacTran)
 
 #--------------------------------------------------------------------------#
 
-boundary_carb_syst_NH4<- function(I, R, L, pH) {
+boundary_carb_syst_No_N<- function(I, R, L, pH) {
   
-
+  
   #------------------------------#
   #            MODEL             #
   #------------------------------#
@@ -62,9 +62,9 @@ boundary_carb_syst_NH4<- function(I, R, L, pH) {
       prod3 = (kb[4] * S[,2]) + (kf[5] * S[,2] * S[,5]) 
       loss3 = (kf[4] * S[,4] * S[,3]) + (kb[5] * S[,3])
       dCdt[,3] = tran_3$dC + prod3 - loss3
-      # flux.up = NH4_H since NH4+ is the N source
+      # flux.up = 0 since N uptake rate is set to 0.
       # Rate of change for H
-      tran_4 = tran.1D(C = S[,4], D = D, C.down = C[4], flux.up = NH4_H, A = A.grid, dx = X.grid, full.output = T)
+      tran_4 = tran.1D(C = S[,4], D = D, C.down = C[4], flux.up = 0, A = A.grid, dx = X.grid, full.output = T)
       prod4 = (kb[4] - kb[1] * S[,4]) * S[,2] + (kf[1] * S[,1]) + kb[6]  
       loss4 = (kf[4] * S[,4] * S[,3]) + (kf[6] * S[,4] * S[,5])
       dCdt[,4] = tran_4$dC + prod4 - loss4
@@ -136,10 +136,6 @@ boundary_carb_syst_NH4<- function(I, R, L, pH) {
   # Uptake flux of CO2 by the cell (mol m-^2 s^-1)
   F1 <- -(23230/3) * R * u / 86400
   
-  # Acido-basic reactions and NH4+ assimilation
-  # With a Redfield ratio C:N of 106: 16, for each mol C assimilated, 0.15 mol H+ is produced in the medium if NH4+ is the N source 
-  NH4_H <- -0.15 * F1
-  
   # Diffusion coefficient of CO2,... (m^2 s^-1)
   D  <- 1.18E-09
   
@@ -176,7 +172,7 @@ boundary_carb_syst_NH4<- function(I, R, L, pH) {
   kf <- c(kf1, kf2, NA, kf4, kf5, kf6)
   
   # Define parameters + grid definition vector
-  parms <- list(NH4_H=NH4_H, C=C, F1=F1, D=D, kb=kb, kf=kf, X.grid=X.grid, A.grid=A.grid)
+  parms <- list(C=C, F1=F1, D=D, kb=kb, kf=kf, X.grid=X.grid, A.grid=A.grid)
   
   
   #------------------------------#
@@ -224,18 +220,18 @@ boundary_carb_syst_NH4<- function(I, R, L, pH) {
 }
 
 #--------------------#
-# Plots of Fig2      #
+# Plots of FigSI.1   #
 #--------------------#
 
 #------------------------------------------------#
 # Calculations at different pH at R = 5 um      #
 #------------------------------------------------#
-carb_pH7 <- boundary_carb_syst_NH4(I = 0.001, R = 5E-06 , L = 150E-06, pH = 7)
-carb_pH5 <- boundary_carb_syst_NH4(I = 0.001, R = 5E-06 , L = 150E-06, pH = 5)
-carb_pH8 <- boundary_carb_syst_NH4(I = 0.001, R = 5E-06 , L = 150E-06, pH = 8)
+carb_pH7 <- boundary_carb_syst_No_N(I = 0.001, R = 5E-06 , L = 150E-06, pH = 7)
+carb_pH5 <- boundary_carb_syst_No_N(I = 0.001, R = 5E-06 , L = 150E-06, pH = 5)
+carb_pH8 <- boundary_carb_syst_No_N(I = 0.001, R = 5E-06 , L = 150E-06, pH = 8)
 
 # Plot of relative enrichment (C/Co) of each chemical species at different pHs.
-tiff( "Fig2_A_E.tiff", res = 100)
+tiff( "FigS1_AE_no_N.tiff", res = 100)
 oldpar <- par(mfrow=c(3,2), mar=c(0,0,0,3), oma = c(4,4.1,4,0.4), las=1)  
 
 # Panel A : CO2 concentrations (r = 5 um)
@@ -248,25 +244,25 @@ mtext(text = "relative change", side=2, line = 2.7, outer=TRUE, las=0)
 mtext(text = expression(paste(" distance from cell surface (", mu, "m)")), side = 1, line = 3, font = 2, outer=TRUE, las=1)
 
 # Panel B : HCO3- concentrations (r = 5 um)
-plot(carb_pH7$xlabel*1E+06-5, carb_pH7$HCO3enrich, type = "l", lty = 1, xaxt = "n", xlim = c(0, 60), ylim = c(0.9, 1.01))
+plot(carb_pH7$xlabel*1E+06-5, carb_pH7$HCO3enrich, type = "l", lty = 1, xaxt = "n", xlim = c(0, 60), ylim = c(0.95, 1.01))
 lines(carb_pH5$xlabel*1E+06-5, carb_pH5$HCO3enrich, type = "l", lty = 2) 
 lines(carb_pH8$xlabel*1E+06-5, carb_pH8$HCO3enrich, type = "l", lty = 3) 
-mtext(text = "B", side = 3, adj = 0.01, line = -1.1, font = 2)
+mtext(text = "B", side = 3, adj = 0.05, line = -1.4, font = 2)
 
 # Panel C : CO32- concentrations (r = 5 um)
-plot(carb_pH7$xlabel*1E+06-5, carb_pH7$CO3enrich, type = "l", lty = 1, xaxt = "n", xlim = c(0, 60), ylim = c(0.5, 1.01))
+plot(carb_pH7$xlabel*1E+06-5, carb_pH7$CO3enrich, type = "l", lty = 1, xaxt = "n", xlim = c(0, 60), ylim = c(0.95, 1.03))
 lines(carb_pH5$xlabel*1E+06-5, carb_pH5$CO3enrich, type = "l", lty = 2) 
 lines(carb_pH8$xlabel*1E+06-5, carb_pH8$CO3enrich, type = "l", lty = 3) 
 mtext(text = "C", side = 3, adj = 0.05, line = -2.1, font = 2)
 
 # Panel D : H+ concentrations (r = 5 um)
-plot(carb_pH7$xlabel*1E+06-5, carb_pH7$Henrich, type = "l", lty = 1, xlim = c(0, 60), ylim = c(0.9, 1.5))
+plot(carb_pH7$xlabel*1E+06-5, carb_pH7$Henrich, type = "l", lty = 1, xlim = c(0, 60), ylim = c(0.95, 1.01))
 lines(carb_pH5$xlabel*1E+06-5, carb_pH5$Henrich, type = "l", lty = 2) 
 lines(carb_pH8$xlabel*1E+06-5, carb_pH8$Henrich, type = "l", lty = 3) 
 mtext(text = "D", side = 3, adj = 0.05, line = -1.4, font = 2)
 
 # Panel E : OH- concentrations (r = 5 um)
-plot(carb_pH7$xlabel*1E+06-5, carb_pH7$OHenrich, type = "l", lty = 1, xlim = c(0, 60), ylim = c(0.5, 1.01))
+plot(carb_pH7$xlabel*1E+06-5, carb_pH7$OHenrich, type = "l", lty = 1, xlim = c(0, 60), ylim = c(0.99, 1.03))
 lines(carb_pH5$xlabel*1E+06-5, carb_pH5$OHenrich, type = "l", lty = 2)
 lines(carb_pH8$xlabel*1E+06-5, carb_pH8$OHenrich, type = "l", lty = 3)
 mtext(text = "E", side = 3, adj = 0.05, line = -2.1, font = 2)
@@ -277,12 +273,12 @@ dev.off()
 #------------------------------------------------#
 # Calculations at different pH at R = 30 um      #
 #------------------------------------------------#
-carb_pH7 <- boundary_carb_syst_NH4(I = 0.001, R = 30E-06 , L = 900E-06, pH = 7)
-carb_pH5 <- boundary_carb_syst_NH4(I = 0.001, R = 30E-06 , L = 900E-06, pH = 5)
-carb_pH8 <- boundary_carb_syst_NH4(I = 0.001, R = 30E-06 , L = 900E-06, pH = 8)
+carb_pH7 <- boundary_carb_syst_No_N(I = 0.001, R = 30E-06 , L = 900E-06, pH = 7)
+carb_pH5 <- boundary_carb_syst_No_N(I = 0.001, R = 30E-06 , L = 900E-06, pH = 5)
+carb_pH8 <- boundary_carb_syst_No_N(I = 0.001, R = 30E-06 , L = 900E-06, pH = 8)
 
 # Plot of relative enrichment (C/Co) of each chemical species at different pHs.
-tiff( "Fig2_F.tiff", res = 100)
+tiff( "FigS1_F_no_N.tiff", res = 100)
 oldpar <- par(mfrow=c(3,2), mar=c(0,0,0,3), oma = c(4.1,4,4,0.4), las=1) 
 
 # Panel F : CO2 concentrations (r = 30 um)
@@ -301,19 +297,19 @@ lines(carb_pH8$xlabel*1E+06-30, carb_pH8$HCO3enrich, type = "l", lty = 3)
 mtext(text = "G", side = 3, adj = 0.03, line = -2.1, font = 2)
 
 # Panel H : CO32- concentrations (r = 30 um)
-plot(carb_pH7$xlabel*1E+06-30, carb_pH7$CO3enrich, type = "l", lty = 1, xaxt = "n", xlim = c(0, 100), ylim = c(0.2, 1.1))
+plot(carb_pH7$xlabel*1E+06-30, carb_pH7$CO3enrich, type = "l", lty = 1, xaxt = "n", xlim = c(0, 100), ylim = c(0.85, 5.1))
 lines(carb_pH5$xlabel*1E+06-30, carb_pH5$CO3enrich, type = "l", lty = 2)
 lines(carb_pH8$xlabel*1E+06-30, carb_pH8$CO3enrich, type = "l", lty = 3)
 mtext(text = "H", side = 3, adj = 0.03, line = -1.4, font = 2)
 
 # Panel I : H+ concentrations (r = 30 um)
-plot(carb_pH7$xlabel*1E+06-30, carb_pH7$Henrich, type = "l", lty = 1, xlim = c(0, 100), ylim = c(1, 4))
+plot(carb_pH7$xlabel*1E+06-30, carb_pH7$Henrich, type = "l", lty = 1, xlim = c(0, 100), ylim = c(0, 1.1))
 lines(carb_pH5$xlabel*1E+06-30, carb_pH5$Henrich, type = "l", lty = 2)
 lines(carb_pH8$xlabel*1E+06-30, carb_pH8$Henrich, type = "l", lty = 3)
 mtext(text = "I", side = 3, adj = 0.03, line = -1.4, font = 2)
 
 # Panel J : OH- concentrations (r = 30 um)
-plot(carb_pH7$xlabel*1E+06-30, carb_pH7$OHenrich, type = "l", lty = 1, xlim = c(0, 100), ylim = c(0.2, 1.1))
+plot(carb_pH7$xlabel*1E+06-30, carb_pH7$OHenrich, type = "l", lty = 1, xlim = c(0, 100), ylim = c(1, 5))
 lines(carb_pH5$xlabel*1E+06-30, carb_pH5$OHenrich, type = "l", lty = 2)
 lines(carb_pH8$xlabel*1E+06-30, carb_pH8$OHenrich, type = "l", lty = 3)
 mtext(text = "J", side = 3, adj = 0.03, line = -1.4, font = 2)

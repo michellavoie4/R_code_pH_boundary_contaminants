@@ -1,5 +1,5 @@
 #---------------------------------------------------------------------------------------------------------------------#
-# Calculations of second order rate constant of a diffusion-limited reaction using the Smoluchowski-Debye equation
+# Calculations of the second order rate constant of a diffusion-limited reaction using the Smoluchowski-Debye equation
 #---------------------------------------------------------------------------------------------------------------------#
 
 # This function calculates the second order rate constant of a diffusion-limited reaction as a function of T as well as the ionic charge, the diffusion coefficients and the radii of the reactants
@@ -49,7 +49,7 @@ kdiff <- function(T=NULL, Da=NULL, Db=NULL, Za=NULL, Zb=NULL, epsi=NULL) {
   return(list(kdiff = kdiff, ratio = ratio, kd = kd))
 }
 
-# Example for the couple H3O+ + OH- -> 2 H2O (measured rate constant = 1.4 x 10^11 L mol-1 s-1 at 25 °C, Laidler, 1965)
+# Example for the couple H3O+ + OH- -> 2 H2O (measured rate constant = 1.4 x 10^11 L mol-1 s-1 at 25 ?C, Laidler, 1965)
 #kdiff_H2O <- kdiff(T = 298, Da = 9.31E-05, Db = 5.27E-05, Za = 1, Zb = -1, epsi = 78.54)  # 80.1
 #kdiff_H2O
 #log10(kdiff_H2O$kdiff)
